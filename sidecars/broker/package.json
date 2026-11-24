@@ -1,0 +1,6 @@
+{
+  "name": "elevated_exec_broker",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Antigravity Elevated Execution sidecar broker and Auxiliary Side Pane UI"
+}

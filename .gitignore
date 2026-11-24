@@ -1,0 +1,19 @@
+# Node.js dependencies (if installed locally)
+node_modules/
+
+# Runtime state, staged manifests, logs & atomic write temporaries
+runtime.json
+audit.jsonl
+audit.*.jsonl
+staged/
+*.tmp
+*.log
+*.log.*
+*.lock
+
+# OS & editor metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/

@@ -1,0 +1,21 @@
+{
+  "command": "node",
+  "args": [
+    "main.mjs"
+  ],
+  "restart_policy": "always",
+  "env": {},
+  "display_name": "Elevated Execution",
+  "description": "Two-click UAC elevation broker, FIFO queue, script inspector, and audit log for Windows.",
+  "has_web_ui": true,
+  "ui_config": {
+    "display_name": "Elevated Execution",
+    "views": [
+      {
+        "path": "/",
+        "entrypoint": "SIDECAR_UI_ENTRYPOINT_AUX_PANE",
+        "title": "Elevated Execution"
+      }
+    ]
+  }
+}

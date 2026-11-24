@@ -1,0 +1,16 @@
+{
+  "name": "elevated-exec",
+  "displayName": "Elevated Execution",
+  "version": "1.0.0",
+  "description": "Desktop- and RDP-accessible two-click UAC elevation broker, Auxiliary Side Pane inspector, and High-IL PowerShell 5.1 runner for Google Antigravity on Windows.",
+  "author": {
+    "name": "Zhenyu Wu",
+    "url": "https://github.com/Adam5Wu"
+  },
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "Open the Elevated Execution side panel",
+    "Run an elevated PowerShell check with Invoke-Elevated.ps1",
+    "Explain when to use elevated execution vs non-elevated Scoop tooling"
+  ]
+}

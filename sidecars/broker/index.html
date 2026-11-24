@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Elevated Execution</title>
+  <script src="/preload.js"></script>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="title-row">
+        <div class="title-group">
+          <img class="header-logo" src="/assets/logo.svg" alt="" width="20" height="20" />
+          <h1 class="title">Elevated Execution</h1>
+          <span id="summary-badge" class="summary-badge">Idle</span>
+        </div>
+        <div class="header-actions">
+          <button id="btn-refresh" class="icon-btn" type="button" title="Refresh state" aria-label="Refresh state">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13.5 8a5.5 5.5 0 1 1-1.4-3.65" />
+              <path d="M13.5 2.5v2.75H10.75" />
+            </svg>
+          </button>
+          <button id="btn-settings" class="icon-btn" type="button" title="Settings" aria-label="Settings" aria-expanded="false">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="8" cy="8" r="2.3" />
+              <path d="M8 1.8v1.4M8 12.8v1.4M3.6 3.6l1 1M11.4 11.4l1 1M1.8 8h1.4M12.8 8h1.4M3.6 12.4l1-1M11.4 4.6l1-1" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <section id="settings-drawer" class="settings-drawer hidden" aria-label="Broker settings">
+        <div class="settings-grid">
+          <label class="field-label" for="input-click1-timeout">
+            Click-1 Auto-Cancel Timeout (seconds, <code>0</code> = No timeout)
+          </label>
+          <div class="input-row">
+            <input id="input-click1-timeout" class="text-input" type="number" min="0" max="86400" step="1" />
+            <div class="preset-row">
+              <button type="button" class="preset-btn" data-target="click1" data-val="60">60s</button>
+              <button type="button" class="preset-btn" data-target="click1" data-val="300">5m</button>
+              <button type="button" class="preset-btn" data-target="click1" data-val="600">10m</button>
+              <button type="button" class="preset-btn" data-target="click1" data-val="0">No timeout</button>
+            </div>
+          </div>
+
+          <label class="field-label" for="input-reminder-interval">
+            Queue Reminder Interval (seconds, <code>0</code> = Disabled)
+          </label>
+          <div class="input-row">
+            <input id="input-reminder-interval" class="text-input" type="number" min="0" max="86400" step="1" />
+            <div class="preset-row">
+              <button type="button" class="preset-btn" data-target="reminder" data-val="60">60s</button>
+              <button type="button" class="preset-btn" data-target="reminder" data-val="300">5m</button>
+              <button type="button" class="preset-btn" data-target="reminder" data-val="600">10m</button>
+              <button type="button" class="preset-btn" data-target="reminder" data-val="0">Off</button>
+            </div>
+          </div>
+        </div>
+        <div class="settings-footer">
+          <span id="settings-status" class="settings-status"></span>
+          <button id="btn-save-config" class="primary-btn" type="button">Save Settings</button>
+        </div>
+      </section>
+    </header>
+
+    <main id="main-scroll" class="main-scroll">
+      <div id="toast-banner" class="toast-banner hidden" role="status"></div>
+
+      <section id="reminder-banner" class="reminder-banner hidden" role="alert">
+        <div class="reminder-text">
+          <strong>Queue Reminder:</strong>
+          <span id="reminder-summary">Requests are waiting in the elevation queue.</span>
+        </div>
+        <button id="btn-dismiss-reminder" class="ghost-btn" type="button">Dismiss</button>
+      </section>
+
+      <section id="empty-state" class="empty-state">
+        <div class="empty-title">No active elevation requests</div>
+        <p class="empty-desc">
+          Requests submitted via <code>Invoke-Elevated.ps1</code> appear here and open a TopMost Click-1 confirmation dialog on <code>WinSta0\Default</code> before Windows UAC.
+        </p>
+      </section>
+
+      <section id="active-card" class="card active-card hidden" aria-label="Active elevation request">
+        <div class="card-header">
+          <div class="card-title-row">
+            <span id="active-id" class="mono-id"></span>
+            <span id="active-state-badge" class="state-badge"></span>
+            <span id="active-detached-badge" class="detached-badge hidden">Detached (CLI disconnected)</span>
+          </div>
+          <div id="countdown-wrap" class="countdown-wrap hidden">
+            <span id="countdown-text" class="countdown-text"></span>
+            <div class="countdown-track">
+              <div id="countdown-bar" class="countdown-bar"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="active-reason" class="reason-box"></div>
+
+        <div class="meta-grid">
+          <div class="meta-row">
+            <span class="meta-label">Attribution</span>
+            <span id="active-attribution" class="meta-val"></span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Mode / Encoding</span>
+            <span id="active-mode" class="meta-val mono"></span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">WorkDir</span>
+            <span id="active-workdir" class="meta-val mono break-all"></span>
+          </div>
+          <div id="active-args-row" class="meta-row hidden">
+            <span class="meta-label">Args</span>
+            <div id="active-args" class="args-chips"></div>
+          </div>
+          <div id="active-target-row" class="meta-row hidden">
+            <span class="meta-label">Target</span>
+            <span id="active-target" class="meta-val mono break-all"></span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">ManifestSha256</span>
+            <div class="sha-wrap">
+              <code id="active-sha" class="sha-code"></code>
+              <button id="btn-copy-sha" class="mini-btn" type="button" title="Copy full SHA-256">Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-bar">
+          <div id="action-buttons" class="action-buttons"></div>
+          <span id="uac-hint" class="uac-hint hidden">Waiting for Windows UAC prompt on WinSta0\Default...</span>
+        </div>
+
+        <div class="subpanel">
+          <div class="subpanel-header">
+            <span class="subpanel-title">Script Viewer <span id="script-size-badge" class="muted-tag"></span></span>
+            <div class="subpanel-actions">
+              <button id="btn-copy-script" class="mini-btn" type="button">Copy</button>
+              <button id="btn-toggle-script" class="mini-btn" type="button">Collapse</button>
+            </div>
+          </div>
+          <pre id="active-script" class="code-viewer"></pre>
+        </div>
+
+        <div id="output-subpanel" class="subpanel">
+          <div class="subpanel-header">
+            <span class="subpanel-title">Live Output <span id="output-size-badge" class="muted-tag"></span></span>
+            <div class="subpanel-actions">
+              <button id="btn-follow-output" class="mini-btn active" type="button">Follow</button>
+            </div>
+          </div>
+          <div id="output-viewport" class="output-viewport"></div>
+        </div>
+      </section>
+
+      <section id="queue-section" class="card queue-section hidden" aria-label="Pending FIFO queue">
+        <div class="section-header">
+          <span class="section-title">Pending Queue</span>
+          <span id="queue-count-badge" class="summary-badge">0</span>
+        </div>
+        <div id="queue-list" class="queue-list"></div>
+      </section>
+
+      <section id="audit-section" class="card audit-section" aria-label="Audit history">
+        <div class="section-header audit-header">
+          <span class="section-title">Audit History</span>
+          <div class="audit-tabs" role="tablist" aria-label="Audit history view">
+            <button id="tab-audit-live" class="audit-tab active" type="button" role="tab" aria-selected="true" aria-controls="audit-panel-live">
+              Live <span id="audit-count-badge" class="summary-badge">0</span>
+            </button>
+            <button id="tab-audit-archived" class="audit-tab" type="button" role="tab" aria-selected="false" aria-controls="audit-panel-archived">
+              Archived <span id="archive-count-badge" class="summary-badge">0</span>
+            </button>
+          </div>
+        </div>
+        <div id="audit-panel-live" class="audit-panel" role="tabpanel" aria-labelledby="tab-audit-live">
+          <div class="audit-toolbar">
+            <span class="muted-tag">Completed requests</span>
+            <button id="btn-clear-audit" class="mini-btn clear-audit-btn" type="button" title="Archive completed audit history to ZIP" aria-label="Archive completed audit history">
+              <span class="clear-audit-progress" aria-hidden="true"></span>
+              <span id="btn-clear-audit-label" class="clear-audit-label">Archive</span>
+            </button>
+          </div>
+          <div id="audit-empty" class="audit-empty">No completed elevation requests recorded yet.</div>
+          <div id="audit-list" class="audit-list"></div>
+        </div>
+        <div id="audit-panel-archived" class="audit-panel hidden" role="tabpanel" aria-labelledby="tab-audit-archived">
+          <div class="archive-toolbar">
+            <select id="archive-select" class="archive-select" aria-label="Select audit archive" disabled>
+              <option value="">No archives</option>
+            </select>
+            <button id="btn-open-archives" class="mini-btn" type="button" title="Open archived audit logs folder">Open Folder</button>
+          </div>
+          <div id="archive-empty" class="audit-empty">No archived audit logs yet.</div>
+          <div id="archive-status" class="archive-status hidden" role="status"></div>
+          <div id="archive-list" class="audit-list"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>
