@@ -38,10 +38,10 @@ To surface a clickable pill in chat that opens or toggles the **Elevated Executi
 
 ## 3. How to Invoke
 
-Call the forwarding shim installed by `Register-Plugin.ps1`:
+Invoke the bundled CLI inside the registered plugin directory (`<plugin-root>\tools\Invoke-Elevated.ps1`):
 
 ```powershell
-& "$HOME\Documents\AgentTooling\Invoke-Elevated.ps1" ...
+& "$HOME\.gemini\config\plugins\elevated-exec\tools\Invoke-Elevated.ps1" ...
 ```
 
 All 4 parameter sets require **`-Reason`** (shown in Click 1, Side Panel, and audit history) and accept optional `-WorkDir <path>`, `-Encoding <auto|utf8|oem|utf16>` (default `auto`), and `-NormalWindow`. Use **`-ArgumentList`** (not `-Args`); there is no `-NoWait`.
@@ -55,12 +55,12 @@ All 4 parameter sets require **`-Reason`** (shown in Click 1, Side Panel, and au
 
 ```powershell
 # Inline commands (always propagate native exit code)
-& "$HOME\Documents\AgentTooling\Invoke-Elevated.ps1" `
+& "$HOME\.gemini\config\plugins\elevated-exec\tools\Invoke-Elevated.ps1" `
     -ScriptBlock { sc.exe query Appinfo; exit $LASTEXITCODE } `
     -Reason "Inspect Appinfo service status"
 
 # Direct executable (or self-contained -ScriptFile) with arguments
-& "$HOME\Documents\AgentTooling\Invoke-Elevated.ps1" `
+& "$HOME\.gemini\config\plugins\elevated-exec\tools\Invoke-Elevated.ps1" `
     -FilePath "whoami.exe" -ArgumentList @("/groups") `
     -Reason "Verify High-IL token groups"
 ```

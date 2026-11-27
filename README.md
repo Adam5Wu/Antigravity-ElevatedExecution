@@ -30,7 +30,7 @@ In Google Antigravity on Windows, `run_command` executes in interactive Session 
 
 Antigravity sidecars, however, run unsandboxed directly on **`WinSta0\Default`**. **`elevated-exec`** bridges `run_command` to `WinSta0\Default` safely without weakening Windows OS boundaries (`PromptOnSecureDesktop = 0` and `fDenyTSConnections = 1` remain untouched):
 
-1. **Thin CLI Client ([`tools/Invoke-Elevated.ps1`](tools/Invoke-Elevated.ps1))**: Invoked from `run_command` via `$HOME\Documents\AgentTooling\Invoke-Elevated.ps1`. Validates parameters, local paths, and PE subsystems, then submits requests over authenticated loopback HTTP (`127.0.0.1:<port>`) and streams SSE events (`POST /ipc/requests`).
+1. **Thin CLI Client ([`tools/Invoke-Elevated.ps1`](tools/Invoke-Elevated.ps1))**: Invoked from `run_command` via `$HOME\.gemini\config\plugins\elevated-exec\tools\Invoke-Elevated.ps1`. Validates parameters, local paths, and PE subsystems, then submits requests over authenticated loopback HTTP (`127.0.0.1:<port>`) and streams SSE events (`POST /ipc/requests`).
 2. **Medium-IL Sidecar Broker & Auxiliary Side Pane ([`sidecars/broker/`](sidecars/broker/))**: Node.js ESM `SidecarApp` (`elevated-exec/broker`) + per-request `broker_helper.ps1` running on `WinSta0\Default`. Atomically writes a 256-bit hex bearer token to `%ANTIGRAVITY_EXECUTABLE_DATA_DIR%\runtime.json` (fallback `%USERPROFILE%\.gemini\antigravity\sidecar_data\elevated-exec\broker\data\runtime.json`), freezes each manifest `{ script, args, workDir, encoding }` (`1 B..10 MiB`) to `DATA_DIR\staged\<requestId>.json` with `ManifestSha256`, enforces a strict 1-by-1 FIFO queue, runs the `< 4 s` desktop/WTS/ACL pre-flight gate, displays system-themed Click-1 and Queue Reminder modals, launches `ShellExecuteExW("runas")` on an STA thread, and hosts a hardened output-only Named Pipe server.
 3. **Unified High-IL Runner ([`runner/Invoke-ElevatedRunner.ps1`](runner/Invoke-ElevatedRunner.ps1))**: Deployed once by an Administrator via [`Install-ElevationRunner.ps1`](Install-ElevationRunner.ps1) into immutable `C:\Program Files\AgentElevation\`. Validates hardened directories before loading inline C#, authenticates the broker helper over the Named Pipe, performs a single-read `ManifestSha256` verification, runs child PowerShell 5.1 inside a Win32 Job Object with `HKLM`-locked `PATH`/`PATHEXT`/`PSModulePath`, isolated `C:\ProgramData\AgentElevation\tmp\<runId>\`, interactive `CONIN$`, and per-line/idle-flush `zh-CN` CP936/UTF-8/UTF-16LE streaming.
 
@@ -105,7 +105,7 @@ flowchart LR
 
 ### Step 1 — Register the Plugin (Non-Elevated)
 
-From the repository root, run `Register-Plugin.ps1` to copy the plugin bundle (including `skills\elevated-execution\SKILL.md`) into `$HOME\.gemini\config\plugins\elevated-exec\`, stamp `sidecars\broker\sidecar.json` (`ELEVATED_EXEC_SYNCED_AT`), and install the forwarding shim at `$HOME\Documents\AgentTooling\Invoke-Elevated.ps1`:
+From the repository root, run `Register-Plugin.ps1` to copy the plugin bundle (including `skills\elevated-execution\SKILL.md` and `tools\Invoke-Elevated.ps1`) into `$HOME\.gemini\config\plugins\elevated-exec\` and stamp `sidecars\broker\sidecar.json` (`ELEVATED_EXEC_SYNCED_AT`):
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Register-Plugin.ps1
@@ -143,11 +143,11 @@ Open the panel from the Auxiliary Side Pane `+` menu (**Elevated Execution**) or
 
 ### 2. Client CLI (`Invoke-Elevated.ps1`)
 
-Invoke via `$HOME\Documents\AgentTooling\Invoke-Elevated.ps1`. All **4 parameter sets** require mandatory **`-Reason`** and accept optional **`-WorkDir`**, **`-Encoding <auto|utf8|oem|utf16>`** (default `auto`), and **`-NormalWindow`**. The argument-array parameter on `ScriptFile` and `FilePath` is **`-ArgumentList`** (not `-Args`), and there is **no `-NoWait` switch**:
+Invoke via `$HOME\.gemini\config\plugins\elevated-exec\tools\Invoke-Elevated.ps1`. All **4 parameter sets** require mandatory **`-Reason`** and accept optional **`-WorkDir`**, **`-Encoding <auto|utf8|oem|utf16>`** (default `auto`), and **`-NormalWindow`**. The argument-array parameter on `ScriptFile` and `FilePath` is **`-ArgumentList`** (not `-Args`), and there is **no `-NoWait` switch**:
 
 ```powershell
 # 1. ScriptBlock (default; literal source text, no outer-scope variable capture)
-& "$HOME\Documents\AgentTooling\Invoke-Elevated.ps1" `
+& "$HOME\.gemini\config\plugins\elevated-exec\tools\Invoke-Elevated.ps1" `
     -ScriptBlock {
         sc.exe query Appinfo
         exit $LASTEXITCODE
@@ -155,18 +155,18 @@ Invoke via `$HOME\Documents\AgentTooling\Invoke-Elevated.ps1`. All **4 parameter
     -Reason "Inspect Appinfo service status"
 
 # 2. ScriptText
-& "$HOME\Documents\AgentTooling\Invoke-Elevated.ps1" `
+& "$HOME\.gemini\config\plugins\elevated-exec\tools\Invoke-Elevated.ps1" `
     -ScriptText "netsh.exe advfirewall show allprofiles state`r`nexit `$LASTEXITCODE" `
     -Reason "Check Windows Firewall profile states"
 
 # 3. ScriptFile (self-contained .ps1; supports UTF-8 with or without BOM)
-& "$HOME\Documents\AgentTooling\Invoke-Elevated.ps1" `
+& "$HOME\.gemini\config\plugins\elevated-exec\tools\Invoke-Elevated.ps1" `
     -ScriptFile "C:\Path\To\Configure-Driver.ps1" `
     -ArgumentList @("-DriverName", "ExampleDriver") `
     -Reason "Run driver configuration script"
 
 # 4. FilePath convenience wrapper (.exe, .com, .msc, .cpl, .msi only)
-& "$HOME\Documents\AgentTooling\Invoke-Elevated.ps1" `
+& "$HOME\.gemini\config\plugins\elevated-exec\tools\Invoke-Elevated.ps1" `
     -FilePath "C:\Windows\System32\whoami.exe" `
     -ArgumentList @("/groups") `
     -Reason "Verify High-IL token groups"
@@ -237,7 +237,7 @@ Antigravity-ElevatedExecution/
 ├── plugin.json                              # Antigravity plugin manifest ("name": "elevated-exec")
 ├── README.md                                # Architecture, security, UI, CLI, tests, and troubleshooting docs
 ├── TODO.md                                  # Optional future enhancements (High-IL immutable audit log)
-├── Register-Plugin.ps1                      # Installs plugin bundle, stamps sidecar.json, creates shim
+├── Register-Plugin.ps1                      # Installs plugin bundle and stamps sidecar.json
 ├── Install-ElevationRunner.ps1              # One-time Admin bootstrap for Program Files & ProgramData
 ├── assets/
 │   ├── logo.svg                             # High-contrast plugin icon
